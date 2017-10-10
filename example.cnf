@@ -1,0 +1,27 @@
+;[app]
+; The TCP network address to listen on
+;address=8080
+;
+; The location where the application data will be saved
+;path=/var/lib/caserver/
+;
+; The key that will be used to sign and verify objects
+; that are saved to read from the storage.
+;key=some secret paraphrase
+
+;[ca]
+; The certificate authority subject name
+; Note: This section is required and has to have at
+;       least a commen_name. Following properties are
+;       available:
+;
+;  	country
+;   organization
+;   organizational_unit
+;   locality
+;   province
+;   street_address
+;   postal_code
+;   serial_number
+;   common_name
+;
