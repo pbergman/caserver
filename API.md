@@ -19,6 +19,9 @@ Most endpoint will support:
 this will return the CA certificate that can be add to the
 browser to verify all signed certificated.
 
+```
+curl http://127.0.0.1:8080/api/v1/ca > ca.pem
+```
 
 ## Sign an Request Certificate
 ##### \[PUT\]   /api/v1/ca
