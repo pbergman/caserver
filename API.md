@@ -1,3 +1,18 @@
+## Accept header
+
+You can set the accept header to switch the response output.
+
+Most endpoint will support:
+
+|        |                      |
+|--------|----------------------|
+|json    |application/json      |
+|tar     |application/tar       |
+|tar.gz  |application/tar+gzip  |
+|pem     |application/pkix-cert |
+|text    |text/plain            |
+
+
 ## Get Certificate Authority
 ##### \[GET\]   /api/v1/ca
 
