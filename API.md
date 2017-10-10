@@ -35,6 +35,28 @@ curl -X PUT -F "csr=@test.csr" http://127.0.0.1:8080/api/v1/cert
 ## Create an Certificate
 ##### \[POST\] /api/v1/ca
 
+###### Certificate subject post paramters:
+
+| name                  |required              |
+|-----------------------|----------------------|
+|country                |false                 |
+|organization           |false                 |
+|organizational_unit    |false                 |
+|locality               |false                 |
+|province               |false                 |
+|street_address         |false                 |
+|postalcode             |false                 |
+|common_name            |true                  |
+
+###### Extra paramters:
+
+
+| name                  |description                                           |
+|-----------------------|----------------------------------------------------- |
+|host                   |the host to bind the certificate to (can be multiple) |
+|bits                   |the bit for creating the private key (default to 2048)|
+
+
 ```
 curl -X POST -d 'cn=example&host=*.example.com&host=example.com' http://127.0.0.1:8080/api/v1/cert
 ```
