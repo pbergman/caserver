@@ -23,7 +23,7 @@ curl http://127.0.0.1:8080/api/v1/ca  > ca.pem
 
 ```
 
-then go to `chrome://settings/certificates` and in the tab Authorities you import the
+then go to `chrome://settings/certificates` and in the tab Authorities you can import the
 download certificate.
 
 ## Nginx
