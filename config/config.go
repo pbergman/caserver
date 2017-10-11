@@ -11,7 +11,7 @@ import (
 )
 
 type AppConfig struct {
-	Path        string `default:"/var/lib/cas"`
+	Path        string `default:"/var/lib/caserver"`
 	Address     string `default:":8080"`
 	Key         [32]byte
 	CaNotAfter  [3]int `default:"10"`
