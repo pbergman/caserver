@@ -1,9 +1,10 @@
 ## CA Server
 
-caserver is a small ca (certificate authority) server that can be used for signing, creating and storing certificates.
-This was build to easily get/create certificates and no security is implemented and should not be used for production.
+caserver is a ca (certificate authority) server that can be used for signing, creating and storing certificates.
 
-See API.md for examples and endpoint of the server.
+This was build to easely manage certificates that can be used for development where no host verification or security is needed.
+
+See (api docs)[API.md] for examples and endpoint of the server.
 
 ## Installing
 
