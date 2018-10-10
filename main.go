@@ -33,9 +33,15 @@ func main() {
 		return
 	}
 	log.Debug(fmt.Sprintf("Starting server '%s'", conf.Address))
-	if err := http.ListenAndServe(conf.Address, router.NewRouter(log, getControllers(manager, debug)...)); err != nil {
+	if err := http.ListenAndServe(conf.Address, getRouter(log, manager, debug)); err != nil {
 		log.Error(err)
 	}
+}
+
+func getRouter(log *logger.Logger, manager *ca.Manager, debug bool) http.Handler {
+	handler := router.NewRouter(log, getControllers(manager, debug)...)
+	handler.AddPreHook(controller.NewPreAcceptHeaderHook())
+	return handler
 }
 
 func getControllers(manager *ca.Manager, debug bool) []router.ControllerInterface {

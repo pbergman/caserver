@@ -21,7 +21,7 @@ func (a ApiCertSignController) Name() string {
 }
 
 func (a ApiCertSignController) Match(request *http.Request) bool {
-	return a.pattern.MatchString(request.RequestURI) && request.Method == "PUT"
+	return a.pattern.MatchString(request.URL.Path) && request.Method == "PUT"
 }
 
 func NewApiCertSign(manager *ca.Manager) *ApiCertSignController {

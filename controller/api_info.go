@@ -12,6 +12,7 @@ import (
 
 	"github.com/pbergman/caserver/ca"
 	"github.com/pbergman/caserver/storage"
+	"github.com/pbergman/caserver/util"
 	"github.com/pbergman/logger"
 )
 
@@ -25,19 +26,14 @@ func (a ApiListController) Name() string {
 }
 
 func (a ApiListController) Match(request *http.Request) bool {
-	return a.pattern.MatchString(request.RequestURI)
+	return a.pattern.MatchString(request.URL.Path)
 }
 
 func NewApiList(manager *ca.Manager) *ApiListController {
 	return &ApiListController{
-		pattern: regexp.MustCompile(`^(?i)/api/v1/list(?:/(ca|cert|csr))?(?:\?host=[^$]+)?$`),
+		pattern: regexp.MustCompile(`^(?i)/api/v1/list(?:/(?P<path>ca|cert|csr))?$`),
 		manager: manager,
 	}
-}
-
-func (a ApiListController) getPath(req *http.Request) string {
-	match := a.pattern.FindStringSubmatch(req.RequestURI)
-	return match[1]
 }
 
 func (a ApiListController) Handle(resp http.ResponseWriter, req *http.Request, logger logger.LoggerInterface) {
@@ -108,8 +104,8 @@ func (a ApiListController) Handle(resp http.ResponseWriter, req *http.Request, l
 }
 
 func (a ApiListController) getCerts(req *http.Request) (map[string][]interface{}, error) {
-	var path string = a.getPath(req)
-	var certs map[string][]interface{} = make(map[string][]interface{})
+	var path = util.GetPatternVar("path", req.URL.Path, a.pattern)
+	var certs = make(map[string][]interface{})
 	err := a.manager.Each(func(r storage.Record) bool {
 		if path == "ca" && !r.IsCa() {
 			return true

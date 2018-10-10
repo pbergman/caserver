@@ -2,7 +2,6 @@ package controller
 
 import (
 	"archive/tar"
-	"net/http"
 	"regexp"
 	"time"
 
@@ -26,9 +25,4 @@ func (s ApiCertController) tarHeader(name string, size int64) *tar.Header {
 		Size:    size,
 		ModTime: time.Now(),
 	}
-}
-
-func (s ApiCertController) getId(req *http.Request) string {
-	match := s.pattern.FindStringSubmatch(req.RequestURI)
-	return match[1]
 }

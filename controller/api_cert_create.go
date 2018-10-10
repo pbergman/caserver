@@ -23,7 +23,7 @@ func (a ApiCertCreateController) Name() string {
 }
 
 func (a ApiCertCreateController) Match(request *http.Request) bool {
-	return a.pattern.MatchString(request.RequestURI) && request.Method == "POST"
+	return a.pattern.MatchString(request.URL.Path) && request.Method == "POST"
 }
 
 func NewApiCertCreate(manager *ca.Manager) *ApiCertCreateController {
