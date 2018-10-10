@@ -5,6 +5,7 @@ import (
 	"regexp"
 
 	"github.com/pbergman/caserver/ca"
+	"github.com/pbergman/caserver/util"
 	"github.com/pbergman/logger"
 )
 
@@ -17,20 +18,20 @@ func (a ApiCertGetController) Name() string {
 }
 
 func (a ApiCertGetController) Match(request *http.Request) bool {
-	return a.pattern.MatchString(request.RequestURI) && request.Method == "GET"
+	return a.pattern.MatchString(request.URL.Path) && request.Method == "GET"
 }
 
 func NewApiCertGet(manager *ca.Manager) *ApiCertGetController {
 	return &ApiCertGetController{
 		ApiCertController{
-			pattern: regexp.MustCompile(`^(?i)/api/v1/cert/([a-f0-9]{4,})$`),
+			pattern: regexp.MustCompile(`^(?i)/api/v1/cert/(?P<id>[a-f0-9]{4,})$`),
 			manager: manager,
 		},
 	}
 }
 
 func (a ApiCertGetController) Handle(resp http.ResponseWriter, req *http.Request, logger logger.LoggerInterface) {
-	id := a.getId(req)
+	id := util.GetPatternVar("id", req.URL.Path, a.pattern)
 	if entry := a.manager.Lookup(id); entry == nil {
 		write_error(resp, "could not find any record by "+id, http.StatusNotFound, logger)
 		return
@@ -43,9 +44,4 @@ func (a ApiCertGetController) Handle(resp http.ResponseWriter, req *http.Request
 			}
 		}
 	}
-}
-
-func (a ApiCertGetController) getId(req *http.Request) string {
-	match := a.pattern.FindStringSubmatch(req.RequestURI)
-	return match[1]
 }

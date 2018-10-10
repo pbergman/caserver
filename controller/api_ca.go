@@ -39,7 +39,7 @@ func (s ApiCaController) Name() string {
 }
 
 func (s ApiCaController) Match(request *http.Request) bool {
-	return request.RequestURI == "/api/v1/ca" && request.Method == "GET"
+	return request.URL.Path == "/api/v1/ca" && request.Method == "GET"
 }
 
 func NewApiCa(manager *ca.Manager) *ApiCaController {

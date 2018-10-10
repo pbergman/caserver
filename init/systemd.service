@@ -1,0 +1,12 @@
+[Unit]
+Description=certificate authority server for signing and creating ssl certificatesa
+After=network.target
+Documentation=https://github.com/pbergman/caserver
+
+[Service]
+ExecStart=/usr/bin/caserver
+TimeoutStopSec=0
+
+[Install]
+WantedBy=multi-user.target
+Alias=caserver.service

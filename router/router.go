@@ -11,6 +11,7 @@ import (
 
 type Router struct {
 	controllers []ControllerInterface
+	pre         []PreControllerInterface
 	logger      *logger.Logger
 	lock        sync.RWMutex
 }
@@ -37,15 +38,23 @@ func (r *Router) ServeHTTP(response http.ResponseWriter, request *http.Request) 
 	r.logger.Debug(r.requestLine(request))
 	response = newWriteWrapper(response)
 	//defer runtime.GC()
+
 	defer func() {
 		r.logger.Debug(fmt.Sprintf("[%p] %s", request, response.(*writeWrapper).statusLine()))
 	}()
+
 	if request.RequestURI == "*" {
 		if request.ProtoAtLeast(1, 1) {
 			response.Header().Set("Connection", "close")
 		}
 		response.WriteHeader(http.StatusBadRequest)
 		return
+	}
+
+	for i, c := 0, len(r.pre); i < c; i++ {
+		if r.pre[i].Match(request) {
+			r.pre[i].Handle(request, r.logger.Get(r.pre[i].Name()))
+		}
 	}
 
 	if controller := r.handler(request); controller != nil {
@@ -65,8 +74,12 @@ func (r *Router) handler(request *http.Request) ControllerInterface {
 	return nil
 }
 
+func (r *Router) AddPreHook(hook PreControllerInterface) {
+	r.pre = append(r.pre, hook)
+}
+
 func (r *Router) requestLine(req *http.Request) string {
-	uri := req.RequestURI
+	uri := req.URL.Path
 	if uri == "" {
 		uri = req.URL.RequestURI()
 	}
@@ -80,6 +93,7 @@ func (r *Router) requestLine(req *http.Request) string {
 func NewRouter(logger *logger.Logger, controller ...ControllerInterface) *Router {
 	return &Router{
 		controllers: controller,
+		pre:         make([]PreControllerInterface, 0),
 		logger:      logger,
 	}
 }

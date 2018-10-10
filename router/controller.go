@@ -6,6 +6,12 @@ import (
 	"github.com/pbergman/logger"
 )
 
+type PreControllerInterface interface {
+	Handle(*http.Request, logger.LoggerInterface)
+	Match(*http.Request) bool
+	Name() string
+}
+
 type ControllerInterface interface {
 	Handle(http.ResponseWriter, *http.Request, logger.LoggerInterface)
 	Match(*http.Request) bool
