@@ -53,7 +53,7 @@ func (r *Router) ServeHTTP(response http.ResponseWriter, request *http.Request) 
 
 	for i, c := 0, len(r.pre); i < c; i++ {
 		if r.pre[i].Match(request) {
-			r.pre[i].Handle(request, r.logger.Get(r.pre[i].Name()))
+			r.pre[i].Handle(request, response.Header(), r.logger.Get(r.pre[i].Name()))
 		}
 	}
 

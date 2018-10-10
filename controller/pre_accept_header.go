@@ -21,7 +21,7 @@ func (p PreAcceptHeader) Match(request *http.Request) bool {
 	return p.pattern.MatchString(request.URL.Path)
 }
 
-func (p PreAcceptHeader) Handle(request *http.Request, logger logger.LoggerInterface) {
+func (p PreAcceptHeader) Handle(request *http.Request, header http.Header, logger logger.LoggerInterface) {
 	extension := util.GetPatternVar("ext", request.URL.Path, p.pattern)
 
 	request.URL.Path = request.URL.Path[:len(request.URL.Path)-len(extension)-1]

@@ -7,7 +7,7 @@ import (
 )
 
 type PreControllerInterface interface {
-	Handle(*http.Request, logger.LoggerInterface)
+	Handle(*http.Request, http.Header, logger.LoggerInterface)
 	Match(*http.Request) bool
 	Name() string
 }

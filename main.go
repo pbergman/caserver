@@ -41,6 +41,7 @@ func main() {
 func getRouter(log *logger.Logger, manager *ca.Manager, debug bool) http.Handler {
 	handler := router.NewRouter(log, getControllers(manager, debug)...)
 	handler.AddPreHook(controller.NewPreAcceptHeaderHook())
+	handler.AddPreHook(&controller.PreAccessControl{})
 	return handler
 }
 
