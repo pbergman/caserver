@@ -9,59 +9,12 @@ import (
 	"errors"
 	"io"
 	"net/http"
-	"strings"
 	"time"
 
+	"github.com/pbergman/caserver/router"
 	"github.com/pbergman/caserver/storage"
 	"github.com/pbergman/caserver/util"
 )
-
-type ctid uint16
-
-const (
-	CONTENT_TYPE_TEXT ctid = 1 << iota
-	CONTENT_TYPE_JSON
-	CONTENT_TYPE_TAR
-	CONTENT_TYPE_TAR_GZIP
-	CONTENT_TYPE_PKIX_CERT
-
-	CONTENT_TYPE_ALL ctid = CONTENT_TYPE_TEXT | CONTENT_TYPE_JSON | CONTENT_TYPE_TAR | CONTENT_TYPE_TAR_GZIP | CONTENT_TYPE_PKIX_CERT
-)
-
-// ReadAndSetContentType will read the accept header, set the appropriate
-// response header and return the matching CONTENT_TYPE_* const.
-func readAndSetContentType(resp http.ResponseWriter, req *http.Request, allowed ctid) ctid {
-	accept := strings.Split(req.Header.Get("accept"), ",")
-	for i, c := 0, len(accept); i < c; i++ {
-		if index := strings.IndexByte(accept[i], ';'); index >= 0 {
-			accept[i] = accept[i][:index]
-		}
-		switch {
-		case (CONTENT_TYPE_JSON == (CONTENT_TYPE_JSON & allowed)) && accept[i] == "application/json":
-			resp.Header().Set("Content-Type", "application/json")
-			resp.Header().Set("X-Content-Type-Options", "nosniff")
-			return CONTENT_TYPE_JSON
-		case (CONTENT_TYPE_TAR == (CONTENT_TYPE_TAR & allowed)) && accept[i] == "application/tar":
-			resp.Header().Set("Content-Type", "application/tar")
-			resp.Header().Set("X-Content-Type-Options", "nosniff")
-			return CONTENT_TYPE_TAR
-		case (CONTENT_TYPE_TAR_GZIP == (CONTENT_TYPE_TAR_GZIP & allowed)) && accept[i] == "application/tar+gzip":
-			resp.Header().Set("Content-Type", "application/tar+gzip")
-			resp.Header().Set("X-Content-Type-Options", "nosniff")
-			return CONTENT_TYPE_TAR_GZIP
-		case (CONTENT_TYPE_PKIX_CERT == (CONTENT_TYPE_PKIX_CERT & allowed)) && accept[i] == "application/pkix-cert":
-			resp.Header().Set("Content-Type", "application/pkix-cert")
-			resp.Header().Set("X-Content-Type-Options", "nosniff")
-			return CONTENT_TYPE_PKIX_CERT
-		case (CONTENT_TYPE_TEXT == (CONTENT_TYPE_TEXT & allowed)) && (accept[i] == "text/plain" || accept[i] == "*/*"):
-			resp.Header().Set("Content-Type", "text/plain; charset=utf-8")
-			resp.Header().Set("X-Content-Type-Options", "nosniff")
-			return CONTENT_TYPE_TEXT
-		}
-	}
-
-	return ctid(0)
-}
 
 func tarFileHeader(name string, size int64) *tar.Header {
 	return &tar.Header{
@@ -155,7 +108,7 @@ func writeTextResponse(writer io.Writer, ca, record storage.Record) error {
 }
 
 // writeJsonResponse will write a json response
-func writeJsonResponse(writer io.Writer, ca, record storage.Record) error {
+func writeJsonResponse(writer io.Writer, indent bool, ca, record storage.Record) error {
 	data := make(map[string]interface{}, 0)
 	buf := new(bytes.Buffer)
 	if record.HasPrivateKey() {
@@ -185,7 +138,9 @@ func writeJsonResponse(writer io.Writer, ca, record storage.Record) error {
 		buf.Reset()
 	}
 	enc := json.NewEncoder(writer)
-	enc.SetIndent("", " ")
+	if indent {
+		enc.SetIndent("", " ")
+	}
 	return enc.Encode(data)
 }
 
@@ -207,21 +162,25 @@ func nameFromRecord(record storage.Record) string {
 	return hex.EncodeToString(buf)
 }
 
-func WriteResponse(resp http.ResponseWriter, req *http.Request, caRecord, cerRecord storage.Record) error {
+func WriteResponse(req *router.Request, resp http.ResponseWriter, caRecord, cerRecord storage.Record) error {
 	name := nameFromRecord(cerRecord)
-	switch readAndSetContentType(resp, req, CONTENT_TYPE_ALL) {
-	case CONTENT_TYPE_JSON:
-		resp.Header().Set("Content-Disposition", "inline; filename=\""+name+".json\"")
-		return writeJsonResponse(resp, caRecord, cerRecord)
-	case CONTENT_TYPE_TEXT:
+	switch req.GetAcceptResponseType().MatchFor(router.ContentTypeAll) {
+	case router.ContentTypeJson:
+		var indent = false
+		if _, o := req.URL.Query()["indent"]; o {
+			indent = true
+		}
+		return writeJsonResponse(resp, indent, caRecord, cerRecord)
+	case router.ContentTypeText:
+		resp.Header().Set("Content-Disposition", "inline; filename=\""+name+".txt\"")
 		return writeTextResponse(resp, caRecord, cerRecord)
-	case CONTENT_TYPE_TAR_GZIP:
-		resp.Header().Set("Content-Disposition", "inline; filename=\""+name+".tar.gz\"")
-		return writeTarGzResponse(resp, caRecord, cerRecord)
-	case CONTENT_TYPE_TAR:
+	case router.ContentTypeTar:
 		resp.Header().Set("Content-Disposition", "inline; filename=\""+name+".tar\"")
 		return writeTarResponse(resp, caRecord, cerRecord)
-	case CONTENT_TYPE_PKIX_CERT:
+	case router.ContentTypeTarGzip:
+		resp.Header().Set("Content-Disposition", "inline; filename=\""+name+".tar.gz\"")
+		return writeTarGzResponse(resp, caRecord, cerRecord)
+	case router.ContentTypePkixCert:
 		resp.Header().Set("Content-Disposition", "inline; filename=\""+name+".pem\"")
 		return writeTextResponse(resp, caRecord, cerRecord)
 	default:

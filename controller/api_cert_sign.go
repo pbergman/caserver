@@ -5,9 +5,9 @@ import (
 	"encoding/pem"
 	"io"
 	"net/http"
-	"regexp"
 
 	"github.com/pbergman/caserver/ca"
+	"github.com/pbergman/caserver/router"
 	"github.com/pbergman/caserver/storage"
 	"github.com/pbergman/logger"
 )
@@ -20,20 +20,15 @@ func (a ApiCertSignController) Name() string {
 	return "controller.api.cert.sign"
 }
 
-func (a ApiCertSignController) Match(request *http.Request) bool {
-	return a.pattern.MatchString(request.URL.Path) && request.Method == "PUT"
+func (a ApiCertSignController) Match(request *router.Request) bool {
+	return a.Controller.Match(request) && request.Method == "PUT"
 }
 
 func NewApiCertSign(manager *ca.Manager) *ApiCertSignController {
-	return &ApiCertSignController{
-		ApiCertController{
-			pattern: regexp.MustCompile(`^(?i)/api/v1/cert$`),
-			manager: manager,
-		},
-	}
+	return &ApiCertSignController{newApiCertController(manager, `^(?i)/api/v1/cert$`)}
 }
 
-func (a ApiCertSignController) Handle(resp http.ResponseWriter, req *http.Request, logger logger.LoggerInterface) {
+func (a ApiCertSignController) Handle(req *router.Request, resp http.ResponseWriter, logger logger.LoggerInterface) {
 	file, _, err := req.FormFile("csr")
 
 	if err != nil {
@@ -80,7 +75,7 @@ func (a ApiCertSignController) Handle(resp http.ResponseWriter, req *http.Reques
 	cerRecord := a.manager.NewRecord()
 	cerRecord.SetCertificate(cer)
 
-	if err := WriteResponse(resp, req, caRecord, cerRecord); err != nil {
+	if err := WriteResponse(req, resp, caRecord, cerRecord); err != nil {
 		write_error(resp, err.Error(), http.StatusInternalServerError, logger)
 	}
 }

@@ -1,4 +1,4 @@
-package storage
+package ca
 
 import (
 	"bytes"
@@ -7,9 +7,17 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"testing"
+
+	"github.com/pbergman/caserver/storage"
 )
 
-func newTestCa(f *factory, t *testing.T) (*rsa.PrivateKey, *x509.Certificate) {
+/**
+ * moved the disk storage test to the ca packages because of import
+ * cycle and because we are testing only the public api of the disk
+ * storage this is the best solution for now...
+ */
+
+func newTestCa(f FactoryInterface, t *testing.T) (*rsa.PrivateKey, *x509.Certificate) {
 	key, err := rsa.GenerateKey(rand.Reader, 512)
 
 	if err != nil {
@@ -25,6 +33,12 @@ func newTestCa(f *factory, t *testing.T) (*rsa.PrivateKey, *x509.Certificate) {
 	return key, cer
 }
 
+func newDiskStorage() *storage.DiskStorage {
+	key := new([32]byte)
+	rand.Read(key[:])
+	return storage.NewDiskStorage("/tmp/", key)
+}
+
 func TestDiskRecord_PemLen(t *testing.T) {
 	key, err := rsa.GenerateKey(rand.Reader, 512)
 
@@ -32,7 +46,7 @@ func TestDiskRecord_PemLen(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	factory := new(factory)
+	factory := NewFactory([3]int{1, 2, 3}, [3]int{4, 5, 6}, nil)
 	// new CA key and certificate
 	ck, cc := newTestCa(factory, t)
 
@@ -48,7 +62,7 @@ func TestDiskRecord_PemLen(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	record := NewDiskRecord(new(DiskStorage), nil)
+	record := storage.NewDiskRecord(newDiskStorage(), nil)
 	record.SetCertificate(cer)
 	record.SetCertificateRequest(csr)
 	record.SetPrivateKey(key)
@@ -84,7 +98,7 @@ func TestDiskRecord_Marshal(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	factory := new(factory)
+	factory := NewFactory([3]int{1, 2, 3}, [3]int{4, 5, 6}, nil)
 
 	ck, cc := newTestCa(factory, t)
 
@@ -100,7 +114,9 @@ func TestDiskRecord_Marshal(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	record := NewDiskRecord(new(DiskStorage), nil)
+	ds := newDiskStorage()
+
+	record := storage.NewDiskRecord(ds, nil)
 	record.SetCertificate(cer)
 	record.SetCertificateRequest(csr)
 	record.SetPrivateKey(key)
@@ -111,7 +127,7 @@ func TestDiskRecord_Marshal(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	newRecord := NewDiskRecord(new(DiskStorage), nil)
+	newRecord := storage.NewDiskRecord(ds, nil)
 
 	if err := newRecord.UnmarshalBinary(buf); err != nil {
 		t.Fatal(err)

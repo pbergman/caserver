@@ -15,6 +15,32 @@ import (
 	"time"
 )
 
+type FactoryInterface interface {
+	NewCertificateAuthority(*rsa.PrivateKey, pkix.Name) (*x509.Certificate, error)
+	NewCertificateRequest(*rsa.PrivateKey, pkix.Name, []string) (*x509.CertificateRequest, error)
+	NewCertificate(*x509.CertificateRequest, *x509.Certificate, *rsa.PrivateKey) (*x509.Certificate, error)
+}
+
+func NewFactory(pna, cna [3]int, serial *big.Int) FactoryInterface {
+	if serial == nil {
+		serial = new(big.Int)
+		// create a base id from the machine id
+		if file, err := os.Open("/etc/machine-id"); err == nil {
+			defer file.Close()
+			// should corresponds to a 16-byte value, that would be 32 byte hex string.
+			// see https://www.freedesktop.org/software/systemd/man/machine-id.html
+			buf := make([]byte, 32)
+			n, _ := file.Read(buf)
+			serial.SetBytes(buf[:n])
+		}
+	}
+	return &factory{
+		pna:    &pna,
+		cna:    &cna,
+		serial: serial,
+	}
+}
+
 type factory struct {
 	// pem (pem not after) represents 3
 	// int`t for year, month and day that

@@ -2,10 +2,9 @@ package controller
 
 import (
 	"net/http"
-	"regexp"
 
 	"github.com/pbergman/caserver/ca"
-	"github.com/pbergman/caserver/util"
+	"github.com/pbergman/caserver/router"
 	"github.com/pbergman/logger"
 )
 
@@ -17,21 +16,16 @@ func (a ApiCertDeleteController) Name() string {
 	return "controller.api.cert.delete"
 }
 
-func (a ApiCertDeleteController) Match(request *http.Request) bool {
-	return a.pattern.MatchString(request.URL.Path) && request.Method == "DELETE"
+func (a ApiCertDeleteController) Match(request *router.Request) bool {
+	return a.Controller.Match(request) && request.Method == "DELETE"
 }
 
 func NewApiCertDelete(manager *ca.Manager) *ApiCertDeleteController {
-	return &ApiCertDeleteController{
-		ApiCertController{
-			pattern: regexp.MustCompile(`^(?i)/api/v1/cert/(?P<id>[a-f0-9]{40})$`),
-			manager: manager,
-		},
-	}
+	return &ApiCertDeleteController{newApiCertController(manager, `^(?i)/api/v1/cert/(?P<id>[a-f0-9]{40})$`)}
 }
 
-func (a ApiCertDeleteController) Handle(resp http.ResponseWriter, req *http.Request, logger logger.LoggerInterface) {
-	id := util.GetPatternVar("id", req.URL.Path, a.pattern)
+func (a ApiCertDeleteController) Handle(req *router.Request, resp http.ResponseWriter, logger logger.LoggerInterface) {
+	id := a.GetPathVar("id", req)
 	if record := a.manager.Lookup(id); record == nil {
 		write_error(resp, "No record found for '"+id+"' .", http.StatusNotFound, logger)
 	} else {

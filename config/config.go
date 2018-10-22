@@ -94,11 +94,14 @@ func (c *Config) readCaSection(conf *ini.Section, ca *pkix.Name) error {
 	if conf.HasKey("serial_number") {
 		ca.SerialNumber = conf.Key("serial_number").String()
 	}
+
 	if conf.HasKey("common_name") {
+
 		ca.CommonName = conf.Key("common_name").String()
 	}
+
 	if ca.CommonName == "" {
-		return errors.New("missing required `ca.comment_name` field in config section")
+		return errors.New("missing required `ca.commen_name` field in config section")
 	} else {
 		return nil
 	}

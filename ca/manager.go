@@ -5,7 +5,6 @@ import (
 	"crypto/rsa"
 	"crypto/x509/pkix"
 	"errors"
-	"path/filepath"
 
 	"github.com/pbergman/caserver/config"
 	"github.com/pbergman/caserver/storage"
@@ -13,16 +12,7 @@ import (
 
 func NewManager(config *config.Config, db storage.Storage) (*Manager, error) {
 
-	factory := new(factory)
-	factory.cna = &config.CaNotAfter
-	factory.pna = &config.PemNotAfter
-	factory.init()
-
-	if db == nil {
-		db = storage.NewDiskStorage(filepath.Join(config.Path, "storage"), &config.Key)
-	}
-
-	manager := &Manager{db, factory, config, nil}
+	manager := &Manager{db, NewFactory(config.PemNotAfter, config.CaNotAfter, nil), config, nil}
 
 	if err := manager.Init(); err != nil {
 		return nil, err
@@ -33,7 +23,7 @@ func NewManager(config *config.Config, db storage.Storage) (*Manager, error) {
 
 type Manager struct {
 	storage storage.Storage
-	factory *factory
+	factory FactoryInterface
 	config  *config.Config
 	ca      *storage.StorageKey
 }
@@ -50,7 +40,7 @@ func (m *Manager) Lookup(id string) storage.Record {
 	return record
 }
 
-func (m *Manager) GetFactory() *factory {
+func (m *Manager) GetFactory() FactoryInterface {
 	return m.factory
 }
 

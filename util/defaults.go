@@ -79,3 +79,10 @@ func setValue(v reflect.Value, d string) {
 
 	}
 }
+
+func DefaultString(a, b string) string {
+	if a == "" {
+		return b
+	}
+	return a
+}

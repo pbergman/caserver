@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/pbergman/caserver/ca"
+	"github.com/pbergman/caserver/router"
 	"github.com/pbergman/logger"
 )
 
@@ -12,7 +13,7 @@ type ApiCaController struct {
 	manager *ca.Manager
 }
 
-func (s ApiCaController) Handle(resp http.ResponseWriter, req *http.Request, logger logger.LoggerInterface) {
+func (s ApiCaController) Handle(req *router.Request, resp http.ResponseWriter, logger logger.LoggerInterface) {
 
 	record := s.manager.Get(s.manager.GetCa())
 
@@ -29,7 +30,7 @@ func (s ApiCaController) Handle(resp http.ResponseWriter, req *http.Request, log
 	// remove from record so wo`t be printed.
 	record.SetPrivateKey(nil)
 
-	if err := WriteResponse(resp, req, nil, record); err != nil {
+	if err := WriteResponse(req, resp, nil, record); err != nil {
 		write_error(resp, err.Error(), http.StatusInternalServerError, logger)
 	}
 }
@@ -38,8 +39,8 @@ func (s ApiCaController) Name() string {
 	return "controller.api.ca"
 }
 
-func (s ApiCaController) Match(request *http.Request) bool {
-	return request.URL.Path == "/api/v1/ca" && request.Method == "GET"
+func (s ApiCaController) Match(req *router.Request) bool {
+	return req.URL.Path == "/api/v1/ca" && req.Method == "GET"
 }
 
 func NewApiCa(manager *ca.Manager) *ApiCaController {

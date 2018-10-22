@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/pbergman/caserver/ca"
+	"github.com/pbergman/caserver/router"
 	"github.com/pbergman/logger"
 )
 
@@ -22,20 +22,15 @@ func (a ApiCertCreateController) Name() string {
 	return "controller.api.cert.create"
 }
 
-func (a ApiCertCreateController) Match(request *http.Request) bool {
-	return a.pattern.MatchString(request.URL.Path) && request.Method == "POST"
+func (a ApiCertCreateController) Match(request *router.Request) bool {
+	return a.Controller.Match(request) && request.Method == "POST"
 }
 
 func NewApiCertCreate(manager *ca.Manager) *ApiCertCreateController {
-	return &ApiCertCreateController{
-		ApiCertController{
-			pattern: regexp.MustCompile(`^(?i)/api/v1/cert$`),
-			manager: manager,
-		},
-	}
+	return &ApiCertCreateController{newApiCertController(manager, `^(?i)/api/v1/cert$`)}
 }
 
-func (a ApiCertCreateController) Handle(resp http.ResponseWriter, req *http.Request, logger logger.LoggerInterface) {
+func (a ApiCertCreateController) Handle(req *router.Request, resp http.ResponseWriter, logger logger.LoggerInterface) {
 
 	record := a.getCa()
 
@@ -82,13 +77,13 @@ func (a ApiCertCreateController) Handle(resp http.ResponseWriter, req *http.Requ
 		return
 	}
 
-	if err := WriteResponse(resp, req, record, entry); err != nil {
+	if err := WriteResponse(req, resp, record, entry); err != nil {
 		write_error(resp, err.Error(), http.StatusInternalServerError, logger)
 		return
 	}
 }
 
-func (a ApiCertCreateController) getBits(req *http.Request) int {
+func (a ApiCertCreateController) getBits(req *router.Request) int {
 	var bits int = 2048
 
 	if val, ok := req.Form["bits"]; ok {

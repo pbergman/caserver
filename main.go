@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 
 	"github.com/pbergman/caserver/ca"
 	"github.com/pbergman/caserver/config"
 	"github.com/pbergman/caserver/controller"
 	"github.com/pbergman/caserver/router"
+	"github.com/pbergman/caserver/storage"
 	"github.com/pbergman/caserver/util"
 	"github.com/pbergman/logger"
 	"github.com/pbergman/logger/handlers"
@@ -27,7 +29,7 @@ func main() {
 		log.Error(err)
 		return
 	}
-	manager, err := ca.NewManager(conf, nil)
+	manager, err := ca.NewManager(conf, storage.NewDiskStorage(filepath.Join(conf.Path, "storage"), &conf.Key))
 	if err != nil {
 		log.Error(err)
 		return
@@ -41,7 +43,7 @@ func main() {
 func getRouter(log *logger.Logger, manager *ca.Manager, debug bool) http.Handler {
 	handler := router.NewRouter(log, getControllers(manager, debug)...)
 	handler.AddPreHook(controller.NewPreAcceptHeaderHook())
-	handler.AddPreHook(&controller.PreAccessControl{})
+	handler.AddPreHook(&controller.PreResponseHeaders{})
 	return handler
 }
 

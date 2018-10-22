@@ -7,13 +7,13 @@ import (
 )
 
 type PreControllerInterface interface {
-	Handle(*http.Request, http.Header, logger.LoggerInterface)
-	Match(*http.Request) bool
+	Handle(*Request, http.Header, logger.LoggerInterface)
+	Match(*Request) bool
 	Name() string
 }
 
 type ControllerInterface interface {
-	Handle(http.ResponseWriter, *http.Request, logger.LoggerInterface)
-	Match(*http.Request) bool
+	Handle(*Request, http.ResponseWriter, logger.LoggerInterface)
+	Match(*Request) bool
 	Name() string
 }

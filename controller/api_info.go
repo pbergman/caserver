@@ -7,43 +7,34 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"regexp"
 	"text/tabwriter"
 
 	"github.com/pbergman/caserver/ca"
+	"github.com/pbergman/caserver/router"
 	"github.com/pbergman/caserver/storage"
-	"github.com/pbergman/caserver/util"
 	"github.com/pbergman/logger"
 )
 
 type ApiListController struct {
-	pattern *regexp.Regexp
-	manager *ca.Manager
+	ApiCertController
 }
 
 func (a ApiListController) Name() string {
 	return "controller.api.list"
 }
 
-func (a ApiListController) Match(request *http.Request) bool {
-	return a.pattern.MatchString(request.URL.Path)
-}
-
 func NewApiList(manager *ca.Manager) *ApiListController {
-	return &ApiListController{
-		pattern: regexp.MustCompile(`^(?i)/api/v1/list(?:/(?P<path>ca|cert|csr))?$`),
-		manager: manager,
-	}
+	return &ApiListController{newApiCertController(manager, `^(?i)/api/v1/list(?:/(?P<path>ca|cert|csr))?$`)}
 }
 
-func (a ApiListController) Handle(resp http.ResponseWriter, req *http.Request, logger logger.LoggerInterface) {
+func (a ApiListController) Handle(req *router.Request, resp http.ResponseWriter, logger logger.LoggerInterface) {
 	certs, err := a.getCerts(req)
 	if err != nil {
 		write_error(resp, err.Error(), http.StatusInternalServerError, logger)
 		return
 	}
-	switch readAndSetContentType(resp, req, CONTENT_TYPE_TEXT|CONTENT_TYPE_JSON) {
-	case CONTENT_TYPE_TEXT:
+	switch req.GetAcceptResponseType().MatchFor(router.ContentTypeText | router.ContentTypeJson) {
+	case router.ContentTypeText:
 		writer := tabwriter.NewWriter(resp, 0, 0, 3, ' ', 0)
 		for k, v := range certs {
 			for c, i := len(v), 0; i < c; i++ {
@@ -67,7 +58,7 @@ func (a ApiListController) Handle(resp http.ResponseWriter, req *http.Request, l
 			}
 		}
 		writer.Flush()
-	case CONTENT_TYPE_JSON:
+	case router.ContentTypeJson:
 		data := make(map[string]map[string]interface{}, 0)
 		for k, v := range certs {
 			for c, i := len(v), 0; i < c; i++ {
@@ -94,7 +85,9 @@ func (a ApiListController) Handle(resp http.ResponseWriter, req *http.Request, l
 			}
 		}
 		encoder := json.NewEncoder(resp)
-		encoder.SetIndent("", " ")
+		if _, o := req.URL.Query()["indent"]; o {
+			encoder.SetIndent("", " ")
+		}
 		if err := encoder.Encode(data); err != nil {
 			write_error(resp, err.Error(), http.StatusInternalServerError, logger)
 		}
@@ -103,8 +96,8 @@ func (a ApiListController) Handle(resp http.ResponseWriter, req *http.Request, l
 	}
 }
 
-func (a ApiListController) getCerts(req *http.Request) (map[string][]interface{}, error) {
-	var path = util.GetPatternVar("path", req.URL.Path, a.pattern)
+func (a ApiListController) getCerts(req *router.Request) (map[string][]interface{}, error) {
+	var path = a.GetPathVar("path", req)
 	var certs = make(map[string][]interface{})
 	err := a.manager.Each(func(r storage.Record) bool {
 		if path == "ca" && !r.IsCa() {

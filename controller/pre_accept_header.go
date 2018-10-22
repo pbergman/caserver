@@ -2,49 +2,47 @@ package controller
 
 import (
 	"net/http"
-	"regexp"
 
 	"github.com/pbergman/caserver/router"
-	"github.com/pbergman/caserver/util"
 	"github.com/pbergman/logger"
 )
 
 type PreAcceptHeader struct {
-	pattern *regexp.Regexp
+	Controller
 }
 
 func (p PreAcceptHeader) Name() string {
 	return "pre.hook.accept.header"
 }
 
-func (p PreAcceptHeader) Match(request *http.Request) bool {
-	return p.pattern.MatchString(request.URL.Path)
-}
-
-func (p PreAcceptHeader) Handle(request *http.Request, header http.Header, logger logger.LoggerInterface) {
-	extension := util.GetPatternVar("ext", request.URL.Path, p.pattern)
-
+func (p PreAcceptHeader) Handle(request *router.Request, header http.Header, logger logger.LoggerInterface) {
+	extension := p.GetPathVar("ext", request)
 	request.URL.Path = request.URL.Path[:len(request.URL.Path)-len(extension)-1]
 	logger.Debug("updating url path to: " + request.URL.Path)
-
 	switch extension {
 	case "json":
-		request.Header.Set("accept", "application/json")
+		p.prefixAcceptHeader(request.Header, "application/json")
 	case "tar":
-		request.Header.Set("accept", "application/tar")
+		p.prefixAcceptHeader(request.Header, "application/tar")
 	case "tar.gz":
-		request.Header.Set("accept", "application/tar+gzip")
+		p.prefixAcceptHeader(request.Header, "application/tar+gzip")
 	case "pem":
-		request.Header.Set("accept", "application/pkix-cert")
+		p.prefixAcceptHeader(request.Header, "application/pkix-cert")
 	case "text", "txt":
-		request.Header.Set("accept", "text/plain")
+		p.prefixAcceptHeader(request.Header, "text/plain")
 	}
+	logger.Debug("set accept header to: '" + request.Header.Get("accept") + "'")
+}
 
-	logger.Debug("set accept header to: " + request.Header.Get("accept"))
+func (p PreAcceptHeader) prefixAcceptHeader(header http.Header, value string) {
+	if accept := header.Get("accept"); accept != "" {
+		value = value + ";q=9.0, " + accept // prefix string with an high weight
+	}
+	header.Set("accept", value)
 }
 
 func NewPreAcceptHeaderHook() router.PreControllerInterface {
 	return &PreAcceptHeader{
-		pattern: regexp.MustCompile(`^/api/v1/.+(?:\.(?P<ext>json|tar(?:\.gz)?|pem|t(?:e)?xt))$`),
+		Controller: newController(`^/api/v1/.+(?:\.(?P<ext>json|tar(?:\.gz)?|pem|t(?:e)?xt))$`),
 	}
 }

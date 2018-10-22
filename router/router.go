@@ -3,8 +3,6 @@ package router
 import (
 	"fmt"
 	"net/http"
-	"strconv"
-	"sync"
 
 	"github.com/pbergman/logger"
 )
@@ -13,34 +11,15 @@ type Router struct {
 	controllers []ControllerInterface
 	pre         []PreControllerInterface
 	logger      *logger.Logger
-	lock        sync.RWMutex
-}
-
-type writeWrapper struct {
-	http.ResponseWriter
-	statusCode int
-}
-
-func newWriteWrapper(inner http.ResponseWriter) http.ResponseWriter {
-	return &writeWrapper{inner, http.StatusOK}
-}
-
-func (r *writeWrapper) WriteHeader(code int) {
-	r.statusCode = code
-	r.ResponseWriter.WriteHeader(code)
-}
-
-func (r writeWrapper) statusLine() string {
-	return strconv.Itoa(r.statusCode) + " " + http.StatusText(r.statusCode)
 }
 
 func (r *Router) ServeHTTP(response http.ResponseWriter, request *http.Request) {
+
 	r.logger.Debug(r.requestLine(request))
-	response = newWriteWrapper(response)
-	//defer runtime.GC()
+	response = newWrappedResponse(response)
 
 	defer func() {
-		r.logger.Debug(fmt.Sprintf("[%p] %s", request, response.(*writeWrapper).statusLine()))
+		r.logger.Debug(fmt.Sprintf("[%p] %s", request, response.(*wrappedResponse).statusLine()))
 	}()
 
 	if request.RequestURI == "*" {
@@ -51,21 +30,23 @@ func (r *Router) ServeHTTP(response http.ResponseWriter, request *http.Request) 
 		return
 	}
 
+	wrapped := &Request{Request: request}
+
 	for i, c := 0, len(r.pre); i < c; i++ {
-		if r.pre[i].Match(request) {
-			r.pre[i].Handle(request, response.Header(), r.logger.Get(r.pre[i].Name()))
+		if r.pre[i].Match(wrapped) {
+			r.pre[i].Handle(wrapped, response.Header(), r.logger.Get(r.pre[i].Name()))
 		}
 	}
 
-	if controller := r.handler(request); controller != nil {
-		controller.Handle(response, request, r.logger.Get(controller.Name()))
+	if handler := r.getHandler(wrapped); handler != nil {
+		handler.Handle(wrapped, response, r.logger.Get(handler.Name()))
 		return
 	}
 
 	http.NotFound(response, request)
 }
 
-func (r *Router) handler(request *http.Request) ControllerInterface {
+func (r *Router) getHandler(request *Request) ControllerInterface {
 	for i, c := 0, len(r.controllers); i < c; i++ {
 		if r.controllers[i].Match(request) {
 			return r.controllers[i]
@@ -79,12 +60,11 @@ func (r *Router) AddPreHook(hook PreControllerInterface) {
 }
 
 func (r *Router) requestLine(req *http.Request) string {
-	uri := req.URL.Path
-	if uri == "" {
+	var uri, method string
+	if uri = req.URL.Path; uri == "" {
 		uri = req.URL.RequestURI()
 	}
-	method := req.Method
-	if method == "" {
+	if method = req.Method; method == "" {
 		method = "GET"
 	}
 	return fmt.Sprintf("[%p] %s %s HTTP/%d.%d", req, method, uri, req.ProtoMajor, req.ProtoMinor)
