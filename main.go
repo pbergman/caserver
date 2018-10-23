@@ -55,8 +55,8 @@ func getControllers(manager *ca.Manager, debug bool) []router.ControllerInterfac
 		controller.NewApiCertDelete(manager),
 		controller.NewApiCertGet(manager),
 		controller.NewApiList(manager),
-		controller.NewDebug(),
 		controller.CorsController{},
+		controller.NewDebug(),
 	}
 	if debug {
 		return controllers
